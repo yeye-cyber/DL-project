@@ -55,7 +55,7 @@ def summerize_diagonstics(history):
     plt.plot(history.history['accuracy'], color ='blue', label ='train')
     plt.plot(history.history['val_accuracy'], color = 'orange', label = 'test')
     plt.legend()
-    filename = "Baseline 1"
+    filename = "Baseline 3 + Augmentation"
     plt.savefig(filename + '_plot.png')
     plt.close()
 
@@ -100,14 +100,18 @@ def drop(i=0.2):
 def augmentation(trainX, trainY, testX, testY, model, augment):
     if augment:
         datagen = ImageDataGenerator(width_shift_range=0.1, height_shift_range=0.1, horizontal_flip=True)
-        it_train = datagen.flow()
+        it_train = datagen.flow(trainX, trainY, batch_size= 64)
+        steps = int(trainX.shape[0]/64)
+        history = model.fit_generator(it_train, steps_per_epoch=steps, epochs=100, validation_data=(testX, testY), verbose=1)
     else:
         history = model.fit(trainX, trainY, epochs = 100, batch_size = 64, validation_data=(testX, testY), verbose =1)
+    return history
 
 
 def main():
     print(tf.test.is_gpu_available())
     L2=False #Weightdecay
+    aug=True #Dataaugmentation
     #load data
     trainX, trainY, testX, testY = load_data()
     print('Train: X=%s, y=%s' % (trainX.shape, trainY.shape))
@@ -115,10 +119,10 @@ def main():
     #preprocess data
     trainX, testX = prep_pixels(trainX, testX)
     #define model
-    funlist = [conv2(1, L2, input = True), conv2(1, L2), max_pool(), flat(), dense('relu', True, 128, L2), dense('softmax', False, 10, L2)]
+    funlist = [conv2(1, L2, input = True), conv2(1, L2), max_pool(), conv2(2, L2), conv2(2, L2), max_pool(), conv2(4, L2), conv2(4, L2), max_pool(), flat(), dense('relu', True, 128, L2), drop(), dense('softmax', False, 10, L2)]
     model = define_model(funlist)
     #fit model
-    history = model.fit(trainX, trainY, epochs = 100, batch_size = 64, validation_data=(testX, testY), verbose =1)
+    history = augmentation(trainX, trainY, testX, testY, model, aug)
     #evaluate model
     _, acc = model.evaluate(testX, testY, verbose=0)
     print('>%.3f'%(acc*100.0))
