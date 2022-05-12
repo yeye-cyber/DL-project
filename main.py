@@ -5,11 +5,7 @@ import tensorflow as tf
 from keras.datasets import cifar10
 from keras.regularizers import l2
 from keras.preprocessing.image import ImageDataGenerator
-from keras.models import Sequential
-from keras.layers import Conv2D
-from keras.layers import MaxPooling2D
-from keras.layers import Dense
-from keras.layers import Flatten
+
 
 #för att kunna ladda ner datasetet om det inte funkar testa: pip install ssl
 import ssl
@@ -55,7 +51,7 @@ def summerize_diagonstics(history):
     plt.plot(history.history['accuracy'], color ='blue', label ='train')
     plt.plot(history.history['val_accuracy'], color = 'orange', label = 'test')
     plt.legend()
-    filename = "Baseline 3 + Augmentation"
+    filename = "Baseline 3 + batnorm aug drop"
     plt.savefig(filename + '_plot.png')
     plt.close()
 
@@ -106,6 +102,8 @@ def augmentation(trainX, trainY, testX, testY, model, augment):
     else:
         history = model.fit(trainX, trainY, epochs = 100, batch_size = 64, validation_data=(testX, testY), verbose =1)
     return history
+def batnorm():
+    return tf.keras.layers.BatchNormalization()
 
 
 def main():
@@ -119,7 +117,7 @@ def main():
     #preprocess data
     trainX, testX = prep_pixels(trainX, testX)
     #define model
-    funlist = [conv2(1, L2, input = True), conv2(1, L2), max_pool(), conv2(2, L2), conv2(2, L2), max_pool(), conv2(4, L2), conv2(4, L2), max_pool(), flat(), dense('relu', True, 128, L2), drop(), dense('softmax', False, 10, L2)]
+    funlist = [conv2(1, L2, input = True), batnorm(), conv2(1, L2), batnorm(), max_pool(), drop(0.2), conv2(2, L2), batnorm(), conv2(2, L2),batnorm(), max_pool(), drop(0.3), conv2(4, L2), batnorm(), conv2(4, L2), batnorm(), max_pool(), drop(0.4), flat(), dense('relu', True, 128, L2), batnorm(), drop(0.5), dense('softmax', False, 10, L2)]
     model = define_model(funlist)
     #fit model
     history = augmentation(trainX, trainY, testX, testY, model, aug)
