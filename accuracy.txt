@@ -25,3 +25,10 @@ Baseline 3 + aug drop
 ________________________________________________
 Baseline 3 + batnorm aug drop
 88.930
+________________________________________________
+Baseline 3 + batnorm aug drop adam
+88.870
+________________________________________________
+Baseline 3 + batnorm aug drop set sig and mean
+56.660
+
