@@ -5,6 +5,8 @@ import tensorflow as tf
 from keras.datasets import cifar10
 from keras.regularizers import l2
 from keras.preprocessing.image import ImageDataGenerator
+import keras.backend as K
+from math import *
 
 
 #för att kunna ladda ner datasetet om det inte funkar testa: pip install ssl
@@ -54,20 +56,40 @@ def summerize_diagonstics(history):
     plt.plot(history.history['accuracy'], color ='blue', label ='train')
     plt.plot(history.history['val_accuracy'], color = 'orange', label = 'test')
     plt.legend()
-    filename = "Baseline 3 + batnorm aug drop mean 0 sig 1"
+    filename = "Baseline 3 + test 3"
     plt.savefig(filename + '_plot.png')
     plt.close()
+    plt.title('test')
+    plt.plot(history.history['lr'], color ='blue', label ='lr')
+    plt.show()
 
+def get_lr_metric(optimizer):
+    def lr(y_true, y_pred):
+        return K.eval(optimizer.lr)
+    return K.eval(lr)
+
+def get_schedule(step):
+    if step < 10:
+        step = min(step, 10)
+        return ((0.01 - 0.1) * (1 - step / 10) ** (1)) + 0.1
+    else:
+        step = min(step, 90)
+        cosine_decay = 0.5 * (1 + cos(pi * step / 90))
+        decayed = (1 - 0) * cosine_decay + 0
+        return 0.1 * decayed
+        
 def define_model(funlist, adam):
     model = tf.keras.Sequential()
     for i in funlist:
         model.add(i)
     #compile
+    lr_metiric = None
     if adam:
-        opt = tf.keras.optimizers.Adam(learning_rate = 0.01)
+        opt = tf.keras.optimizers.Adam()
     else:
-        opt = tf.keras.optimizers.SGD(learning_rate = 0.01, momentum = 0.9)
+        opt = tf.keras.optimizers.SGD(momentum = 0.9)
     model.compile(optimizer = opt, loss = 'categorical_crossentropy', metrics = ['accuracy'])
+    
     return model
 
 def conv2(i, L2= False, input=False):
@@ -99,26 +121,27 @@ def dense(act, ini, i, L2=False):
 def drop(i=0.2):
     return tf.keras.layers.Dropout(i)
 
-def augmentation(trainX, trainY, testX, testY, model, augment):
+def augmentation(trainX, trainY, testX, testY, model, augment, schedule):
     if augment:
         datagen = ImageDataGenerator(width_shift_range=0.1, height_shift_range=0.1, horizontal_flip=True)
         it_train = datagen.flow(trainX, trainY, batch_size= 64)
         steps = int(trainX.shape[0]/64)
-        history = model.fit_generator(it_train, steps_per_epoch=steps, epochs=100, validation_data=(testX, testY), verbose=1)
+        history = model.fit_generator(it_train, steps_per_epoch=steps, epochs=100, validation_data=(testX, testY), callbacks = [tf.keras.callbacks.LearningRateScheduler(schedule)], verbose=1)
     else:
-        history = model.fit(trainX, trainY, epochs = 100, batch_size = 64, validation_data=(testX, testY), verbose =1)
+        history = model.fit(trainX, trainY, epochs = 100, batch_size = 64, validation_data=(testX, testY), callbacks = [tf.keras.callbacks.LearningRateScheduler(schedule)], verbose =1)
     return history
+
 def batnorm():
     return tf.keras.layers.BatchNormalization()
 
 
 def main():
-    #TODO: Ändra ordning på dropout och batnorm (izi)
+    #TODO:
     # learning rate schedulers (lite svårare)
 
     print(tf.test.is_gpu_available())
     L2=False #Weightdecay
-    aug=True #Dataaugmentation
+    aug= True #Dataaugmentation
     adam = False #adam optimizer
     #load data
     trainX, trainY, testX, testY = load_data()
@@ -127,10 +150,11 @@ def main():
     #preprocess data
     trainX, testX = prep_pixels(trainX, testX)
     #define model
-    funlist = [conv2(1, L2, input = True), batnorm(), conv2(1, L2), batnorm(), max_pool(), drop(0.2), conv2(2, L2), batnorm(), conv2(2, L2),batnorm(), max_pool(), drop(0.3), conv2(4, L2), batnorm(), conv2(4, L2), batnorm(), max_pool(), drop(0.4), flat(), dense('relu', True, 128, L2), batnorm(), drop(0.5), dense('softmax', False, 10, L2)]
+    scheduleLin = tf.keras.optimizers.schedules.CosineDecayRestarts(initial_learning_rate=0.1, first_decay_steps = 50, t_mul = 1.0, m_mul= 1.0, alpha = 0.0)
+    funlist = [conv2(1, L2, input = True), batnorm(), conv2(1, L2), batnorm(), max_pool(), drop(0.2), conv2(2, L2), batnorm(), conv2(2, L2), batnorm(), max_pool(),drop(0.3), conv2(4, L2), batnorm(), conv2(4, L2), batnorm(), max_pool(),drop(0.4), flat(), dense('relu', True, 128, L2), batnorm(), drop(0.5), dense('softmax', False, 10, L2)]
     model = define_model(funlist, adam)
     #fit model
-    history = augmentation(trainX, trainY, testX, testY, model, aug)
+    history = augmentation(trainX, trainY, testX, testY, model, aug, scheduleLin)
     #evaluate model
     _, acc = model.evaluate(testX, testY, verbose=0)
     print('>%.3f'%(acc*100.0))

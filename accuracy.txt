@@ -31,4 +31,18 @@ Baseline 3 + batnorm aug drop adam
 ________________________________________________
 Baseline 3 + batnorm aug drop set sig and mean
 56.660
-
+________________________________________________
+Baseline 3 + batnorm aug drop swp
+84.790
+________________________________________________
+Baseline 3 + batnorm aug drop swp
+87.860
+________________________________________________
+Baseline 3 + batnorm aug drop step decay
+80.240
+________________________________________________
+Baseline 3 + batnorm aug drop warm up, cosine
+89.890
+________________________________________________
+Baseline 3 + batnorm aug drop warm up, cosinerestart
+89.160
