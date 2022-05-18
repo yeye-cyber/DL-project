@@ -35,8 +35,11 @@ ________________________________________________
 Baseline 3 + batnorm aug drop swp
 84.790
 ________________________________________________
-Baseline 3 + batnorm aug drop swp
+Baseline 3 + batnorm aug
 87.860
+________________________________________________
+Baseline 3 + drop aug
+83.040
 ________________________________________________
 Baseline 3 + batnorm aug drop step decay
 80.240

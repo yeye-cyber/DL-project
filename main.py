@@ -59,9 +59,9 @@ def summerize_diagonstics(history):
     filename = "Baseline 3 + test 3"
     plt.savefig(filename + '_plot.png')
     plt.close()
-    plt.title('test')
+    """plt.title('test')
     plt.plot(history.history['lr'], color ='blue', label ='lr')
-    plt.show()
+    plt.show()"""
 
 def get_lr_metric(optimizer):
     def lr(y_true, y_pred):
@@ -87,7 +87,7 @@ def define_model(funlist, adam):
     if adam:
         opt = tf.keras.optimizers.Adam()
     else:
-        opt = tf.keras.optimizers.SGD(momentum = 0.9)
+        opt = tf.keras.optimizers.SGD(learning_rate=0.01, momentum = 0.9)
     model.compile(optimizer = opt, loss = 'categorical_crossentropy', metrics = ['accuracy'])
     
     return model
@@ -126,7 +126,8 @@ def augmentation(trainX, trainY, testX, testY, model, augment, schedule):
         datagen = ImageDataGenerator(width_shift_range=0.1, height_shift_range=0.1, horizontal_flip=True)
         it_train = datagen.flow(trainX, trainY, batch_size= 64)
         steps = int(trainX.shape[0]/64)
-        history = model.fit_generator(it_train, steps_per_epoch=steps, epochs=100, validation_data=(testX, testY), callbacks = [tf.keras.callbacks.LearningRateScheduler(schedule)], verbose=1)
+        #, callbacks = [tf.keras.callbacks.LearningRateScheduler(schedule)]
+        history = model.fit_generator(it_train, steps_per_epoch=steps, epochs=100, validation_data=(testX, testY), verbose=1)
     else:
         history = model.fit(trainX, trainY, epochs = 100, batch_size = 64, validation_data=(testX, testY), callbacks = [tf.keras.callbacks.LearningRateScheduler(schedule)], verbose =1)
     return history
@@ -151,7 +152,7 @@ def main():
     trainX, testX = prep_pixels(trainX, testX)
     #define model
     scheduleLin = tf.keras.optimizers.schedules.CosineDecayRestarts(initial_learning_rate=0.1, first_decay_steps = 50, t_mul = 1.0, m_mul= 1.0, alpha = 0.0)
-    funlist = [conv2(1, L2, input = True), batnorm(), conv2(1, L2), batnorm(), max_pool(), drop(0.2), conv2(2, L2), batnorm(), conv2(2, L2), batnorm(), max_pool(),drop(0.3), conv2(4, L2), batnorm(), conv2(4, L2), batnorm(), max_pool(),drop(0.4), flat(), dense('relu', True, 128, L2), batnorm(), drop(0.5), dense('softmax', False, 10, L2)]
+    funlist = [conv2(1, L2, input = True), conv2(1, L2), max_pool(), drop(0.2), conv2(2, L2), conv2(2, L2), max_pool(), drop(0.3), conv2(4, L2), conv2(4, L2), max_pool(), drop(0.4), flat(), dense('relu', True, 128, L2), drop(0.5), dense('softmax', False, 10, L2)]
     model = define_model(funlist, adam)
     #fit model
     history = augmentation(trainX, trainY, testX, testY, model, aug, scheduleLin)
