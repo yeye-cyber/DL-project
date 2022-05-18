@@ -7,6 +7,7 @@ from keras.regularizers import l2
 from keras.preprocessing.image import ImageDataGenerator
 import keras.backend as K
 from math import *
+import numpy as np
 
 
 #för att kunna ladda ner datasetet om det inte funkar testa: pip install ssl
@@ -87,7 +88,7 @@ def define_model(funlist, adam):
     if adam:
         opt = tf.keras.optimizers.Adam()
     else:
-        opt = tf.keras.optimizers.SGD(learning_rate=0.01, momentum = 0.9)
+        opt = tf.keras.optimizers.SGD(learning_rate=0.001, momentum = 0.9)
     model.compile(optimizer = opt, loss = 'categorical_crossentropy', metrics = ['accuracy'])
     
     return model
@@ -135,12 +136,15 @@ def augmentation(trainX, trainY, testX, testY, model, augment, schedule):
 def batnorm():
     return tf.keras.layers.BatchNormalization()
 
+def preProcess(data, train):
+    """Preprocessing of the data: Zero mean"""
+    mean = np.mean(train)
+    std = np.std(train)
+    data = (data- mean)/std
+    return data
 
 def main():
-    #TODO:
-    # learning rate schedulers (lite svårare)
-
-    print(tf.test.is_gpu_available())
+    #print(tf.test.is_gpu_available())
     L2=False #Weightdecay
     aug= True #Dataaugmentation
     adam = False #adam optimizer
@@ -149,10 +153,13 @@ def main():
     print('Train: X=%s, y=%s' % (trainX.shape, trainY.shape))
     print('Test: X=%s, y=%s' % (testX.shape, testY.shape))
     #preprocess data
-    trainX, testX = prep_pixels(trainX, testX)
+    """trainX, testX = prep_pixels(trainX, testX)
+    print(trainX.shape, testX.shape)"""
+    ntrainX, ntestX = preProcess(trainX, trainX), preProcess(testX, trainX)
+    trainX, testX = ntrainX, ntestX
     #define model
     scheduleLin = tf.keras.optimizers.schedules.CosineDecayRestarts(initial_learning_rate=0.1, first_decay_steps = 50, t_mul = 1.0, m_mul= 1.0, alpha = 0.0)
-    funlist = [conv2(1, L2, input = True), conv2(1, L2), max_pool(), drop(0.2), conv2(2, L2), conv2(2, L2), max_pool(), drop(0.3), conv2(4, L2), conv2(4, L2), max_pool(), drop(0.4), flat(), dense('relu', True, 128, L2), drop(0.5), dense('softmax', False, 10, L2)]
+    funlist = [conv2(1, L2, input = True), conv2(1, L2), max_pool(), conv2(2, L2), conv2(2, L2), max_pool(), conv2(4, L2), conv2(4, L2), max_pool(), flat(), dense('relu', True, 128, L2), dense('softmax', False, 10, L2)]
     model = define_model(funlist, adam)
     #fit model
     history = augmentation(trainX, trainY, testX, testY, model, aug, scheduleLin)
