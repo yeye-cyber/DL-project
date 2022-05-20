@@ -52,3 +52,15 @@ Baseline 3 + batnorm aug drop warm up, cosine
 ________________________________________________
 Baseline 3 + batnorm aug drop cosinerestart
 89.160%
+________________________________________________
+Baseline 3 + batnorm aug drop 400
+89.540
+________________________________________________
+Baseline 3 + aug drop 200
+86.550
+________________________________________________
+Baseline 3 + vari drop 200
+83.030
+________________________________________________
+Baseline 3 + batnorm aug drop 400 warm up, cosine
+91.410

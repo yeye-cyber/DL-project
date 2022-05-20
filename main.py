@@ -57,7 +57,7 @@ def summerize_diagonstics(history):
     plt.plot(history.history['accuracy'], color ='blue', label ='train')
     plt.plot(history.history['val_accuracy'], color = 'orange', label = 'test')
     plt.legend()
-    filename = "Baseline 3 + test 3"
+    filename = "Baseline 3 + bat aug Vdrop warmup cosine 400"
     plt.savefig(filename + '_plot.png')
     plt.close()
     """plt.title('test')
@@ -70,12 +70,12 @@ def get_lr_metric(optimizer):
     return K.eval(lr)
 
 def get_schedule(step):
-    if step < 10:
-        step = min(step, 10)
-        return ((0.01 - 0.1) * (1 - step / 10) ** (1)) + 0.1
+    if step < 40:
+        step = min(step, 40)
+        return ((0.01 - 0.1) * (1 - step / 40) ** (1)) + 0.1
     else:
-        step = min(step, 90)
-        cosine_decay = 0.5 * (1 + cos(pi * step / 90))
+        step = min(step, 400)
+        cosine_decay = 0.5 * (1 + cos(pi * step / 400))
         decayed = (1 - 0) * cosine_decay + 0
         return 0.1 * decayed
         
@@ -128,9 +128,9 @@ def augmentation(trainX, trainY, testX, testY, model, augment, schedule):
         it_train = datagen.flow(trainX, trainY, batch_size= 64)
         steps = int(trainX.shape[0]/64)
         #, callbacks = [tf.keras.callbacks.LearningRateScheduler(schedule)]
-        history = model.fit_generator(it_train, steps_per_epoch=steps, epochs=100, validation_data=(testX, testY), verbose=1)
+        history = model.fit_generator(it_train, steps_per_epoch=steps, epochs=400, validation_data=(testX, testY), callbacks = [tf.keras.callbacks.LearningRateScheduler(get_schedule)], verbose=1)
     else:
-        history = model.fit(trainX, trainY, epochs = 100, batch_size = 64, validation_data=(testX, testY), callbacks = [tf.keras.callbacks.LearningRateScheduler(schedule)], verbose =1)
+        history = model.fit(trainX, trainY, epochs = 100, batch_size = 64, validation_data=(testX, testY), verbose =1)
     return history
 
 def batnorm():
@@ -159,7 +159,7 @@ def main():
     trainX, testX = ntrainX, ntestX
     #define model
     scheduleLin = tf.keras.optimizers.schedules.CosineDecayRestarts(initial_learning_rate=0.1, first_decay_steps = 50, t_mul = 1.0, m_mul= 1.0, alpha = 0.0)
-    funlist = [conv2(1, L2, input = True), conv2(1, L2), max_pool(), conv2(2, L2), conv2(2, L2), max_pool(), conv2(4, L2), conv2(4, L2), max_pool(), flat(), dense('relu', True, 128, L2), dense('softmax', False, 10, L2)]
+    funlist = [conv2(1, L2, input = True), batnorm(), conv2(1, L2), batnorm(), max_pool(), drop(0.2), conv2(2, L2), batnorm(), conv2(2, L2),batnorm(), max_pool(), drop(0.3), conv2(4, L2),batnorm(), conv2(4, L2),batnorm(), max_pool(), drop(0.4), flat(), dense('relu', True, 128, L2),batnorm(), drop(0.5), dense('softmax', False, 10, L2)]
     model = define_model(funlist, adam)
     #fit model
     history = augmentation(trainX, trainY, testX, testY, model, aug, scheduleLin)
