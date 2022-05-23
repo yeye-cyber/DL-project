@@ -57,7 +57,7 @@ def summerize_diagonstics(history):
     plt.plot(history.history['accuracy'], color ='blue', label ='train')
     plt.plot(history.history['val_accuracy'], color = 'orange', label = 'test')
     plt.legend()
-    filename = "Baseline 3 + bat aug Vdrop warmup cosine 400"
+    filename = "Baseline 3 + Varition drop 200"
     plt.savefig(filename + '_plot.png')
     plt.close()
     """plt.title('test')
@@ -128,9 +128,9 @@ def augmentation(trainX, trainY, testX, testY, model, augment, schedule):
         it_train = datagen.flow(trainX, trainY, batch_size= 64)
         steps = int(trainX.shape[0]/64)
         #, callbacks = [tf.keras.callbacks.LearningRateScheduler(schedule)]
-        history = model.fit_generator(it_train, steps_per_epoch=steps, epochs=400, validation_data=(testX, testY), callbacks = [tf.keras.callbacks.LearningRateScheduler(get_schedule)], verbose=1)
+        history = model.fit_generator(it_train, steps_per_epoch=steps, epochs=400, validation_data=(testX, testY), callbacks = [tf.keras.callbacks.LearningRateScheduler(schedule)], verbose=1)
     else:
-        history = model.fit(trainX, trainY, epochs = 100, batch_size = 64, validation_data=(testX, testY), verbose =1)
+        history = model.fit(trainX, trainY, epochs = 200, batch_size = 64, validation_data=(testX, testY), verbose =1)
     return history
 
 def batnorm():
@@ -146,7 +146,7 @@ def preProcess(data, train):
 def main():
     #print(tf.test.is_gpu_available())
     L2=False #Weightdecay
-    aug= True #Dataaugmentation
+    aug= False #Dataaugmentation
     adam = False #adam optimizer
     #load data
     trainX, trainY, testX, testY = load_data()
@@ -158,8 +158,8 @@ def main():
     ntrainX, ntestX = preProcess(trainX, trainX), preProcess(testX, trainX)
     trainX, testX = ntrainX, ntestX
     #define model
-    scheduleLin = tf.keras.optimizers.schedules.CosineDecayRestarts(initial_learning_rate=0.1, first_decay_steps = 50, t_mul = 1.0, m_mul= 1.0, alpha = 0.0)
-    funlist = [conv2(1, L2, input = True), batnorm(), conv2(1, L2), batnorm(), max_pool(), drop(0.2), conv2(2, L2), batnorm(), conv2(2, L2),batnorm(), max_pool(), drop(0.3), conv2(4, L2),batnorm(), conv2(4, L2),batnorm(), max_pool(), drop(0.4), flat(), dense('relu', True, 128, L2),batnorm(), drop(0.5), dense('softmax', False, 10, L2)]
+    scheduleLin = tf.keras.optimizers.schedules.CosineDecayRestarts(initial_learning_rate=0.1, first_decay_steps = 200, t_mul = 1.0, m_mul= 1.0, alpha = 0.0)
+    funlist = [conv2(1, L2, input = True), conv2(1, L2), max_pool(), drop(0.2), conv2(2, L2), conv2(2, L2), max_pool(), drop(0.3), conv2(4, L2), conv2(4, L2), max_pool(), drop(0.4), flat(), dense('relu', True, 128, L2), drop(0.5), dense('softmax', False, 10, L2)]
     model = define_model(funlist, adam)
     #fit model
     history = augmentation(trainX, trainY, testX, testY, model, aug, scheduleLin)
@@ -170,4 +170,3 @@ def main():
     summerize_diagonstics(history)
 
 main()
-
